@@ -1,0 +1,50 @@
+# 3x-ui panel packaged for Railway.
+#
+# Railway gives a service exactly ONE public port and terminates TLS at its own
+# edge, so the panel (2053), the subscription server (2096) and the Xray
+# inbound (10085) all bind to loopback and are split by URL path in nginx.
+#
+# Mount a Railway Volume at /etc/x-ui or every redeploy wipes your users.
+
+FROM ubuntu:24.04
+
+# Pinned on purpose: the API paths and the inbound payload shape in
+# entrypoint.sh were verified against this exact release.
+ARG XUI_VERSION=v3.9.0
+ARG TARGETARCH=amd64
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl jq nginx python3 sqlite3 tzdata iproute2 procps \
+    && ln -sf /usr/share/zoneinfo/Asia/Tehran /etc/localtime \
+    && echo "Asia/Tehran" > /etc/timezone \
+    && rm -rf /var/lib/apt/lists/*
+
+# Fetch the official release tarball rather than the Docker Hub image, which
+# is frequently rate-limited and fails Railway builds.
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+        amd64) ARCH=amd64 ;; \
+        arm64) ARCH=arm64 ;; \
+        arm)   ARCH=armv7a ;; \
+        *)     echo "unsupported arch: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    mkdir -p /usr/local/x-ui; \
+    curl -fsSL -o /tmp/x-ui.tar.gz \
+      "https://github.com/MHSanaei/3x-ui/releases/download/${XUI_VERSION}/x-ui-linux-${ARCH}.tar.gz"; \
+    tar -xzf /tmp/x-ui.tar.gz -C /usr/local/ --strip-components=1; \
+    rm -f /tmp/x-ui.tar.gz; \
+    chmod +x /usr/local/x-ui/x-ui /usr/local/x-ui/bin/xray-linux-${ARCH}
+
+RUN mkdir -p /etc/x-ui /var/log/x-ui /run/nginx
+
+COPY nginx.conf.template /opt/nginx.conf.template
+COPY entrypoint.sh /opt/entrypoint.sh
+RUN chmod +x /opt/entrypoint.sh
+
+# Railway injects PORT; 8080 keeps `docker run` working outside Railway.
+ENV HTTP_PORT=8080
+EXPOSE 8080
+
+ENTRYPOINT ["/opt/entrypoint.sh"]
