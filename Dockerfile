@@ -23,6 +23,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Fetch the official release tarball rather than the Docker Hub image, which
 # is frequently rate-limited and fails Railway builds.
+# The release tarball's only top-level entry is "x-ui/", and inside it the panel
+# binary is also called "x-ui". So extracting with --strip-components=1 maps
+# x-ui/x-ui onto /usr/local/x-ui -- the very path the directory itself occupies.
+# Do NOT pre-create that directory and do NOT strip: extract as-is and let tar
+# create /usr/local/x-ui/ itself.
 RUN set -eux; \
     case "${TARGETARCH}" in \
         amd64) ARCH=amd64 ;; \
@@ -30,12 +35,12 @@ RUN set -eux; \
         arm)   ARCH=armv7a ;; \
         *)     echo "unsupported arch: ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
-    mkdir -p /usr/local/x-ui; \
     curl -fsSL -o /tmp/x-ui.tar.gz \
       "https://github.com/MHSanaei/3x-ui/releases/download/${XUI_VERSION}/x-ui-linux-${ARCH}.tar.gz"; \
-    tar -xzf /tmp/x-ui.tar.gz -C /usr/local/ --strip-components=1; \
+    tar -xzf /tmp/x-ui.tar.gz -C /usr/local/; \
     rm -f /tmp/x-ui.tar.gz; \
-    chmod +x /usr/local/x-ui/x-ui /usr/local/x-ui/bin/xray-linux-${ARCH}
+    chmod +x /usr/local/x-ui/x-ui /usr/local/x-ui/bin/xray-linux-${ARCH}; \
+    /usr/local/x-ui/x-ui -v
 
 RUN mkdir -p /etc/x-ui /var/log/x-ui /run/nginx
 
