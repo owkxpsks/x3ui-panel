@@ -42,7 +42,7 @@ INBOUND_PORT="${INBOUND_PORT:-10085}"
 PANEL_PATH="${PANEL_PATH:-/panel/}"
 SUB_PATH="${SUB_PATH:-/sub/}"
 TUNNEL_PATH="${TUNNEL_PATH:-/ws}"
-TRANSPORT="${TRANSPORT:-xhttp}"
+TRANSPORT="${TRANSPORT:-ws}"
 CLIENT_EMAIL="${CLIENT_EMAIL:-user1}"
 CLIENT_SUBID="${CLIENT_SUBID:-mobile}"
 
@@ -112,7 +112,7 @@ INBOUND_PORT="${INBOUND_PORT:-10085}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
 PUBLIC_PORT="${PUBLIC_PORT:-443}"
 PUBLIC_TLS="${PUBLIC_TLS:-tls}"          # tls | none  (Railway's edge terminates TLS -> the link must say tls)
-TRANSPORT="${TRANSPORT:-xhttp}"           # xhttp | ws
+TRANSPORT="${TRANSPORT:-ws}"             # ws | xhttp  (ws works in every client)
 TUNNEL_PATH="${TUNNEL_PATH:-/ws}"                 # public path nginx exposes; also the internal path
 CLIENT_EMAIL="${CLIENT_EMAIL:-user1}"
 CLIENT_SUBID="${CLIENT_SUBID:-mobile}"
@@ -398,6 +398,9 @@ if [ -n "${GENERATED_PASSWORD:-}" ]; then
   echo "                 (or set ADMIN_PASSWORD in Railway Variables and redeploy)"
 fi
 echo "  Subscription   ${SUB_URL}"
+echo "                 ^ give every new client subId \"${CLIENT_SUBID}\" and it"
+echo "                   appears in this same link automatically. No new link,"
+echo "                   no new inbound, nothing to hand out per person."
 if [ -n "${CLIENT_LINK:-}" ]; then
   echo
   echo "  Client config:"
